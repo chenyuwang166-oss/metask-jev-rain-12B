@@ -1,0 +1,141 @@
+{
+  "status": "Public231 fitted; held-out validation not performed",
+  "held_out_validated": false,
+  "models": {
+    "gemma-4-12b-awq": {
+      "fast": {
+        "placeholder": false,
+        "status": "candidate; held-out validation required",
+        "temperature_by_kind": {
+          "choice": 2.5936791093020193,
+          "score": 2.5936791093020193,
+          "noul": "one_bin"
+        },
+        "noul_calibration": {
+          "p_cal": 0.81
+        },
+        "by_type": {
+          "noul": {
+            "count": 74,
+            "p_cal": 0.7972972972972973,
+            "fitted": true,
+            "status": "candidate"
+          },
+          "choice": {
+            "count": 139,
+            "temperature": 2.5936791093020193,
+            "nll": 0.36782930220726345,
+            "fitted": true,
+            "status": "candidate"
+          },
+          "score": {
+            "count": 18,
+            "temperature": 2.5936791093020193,
+            "nll": 0.37666361932448766,
+            "fitted": true,
+            "status": "insufficient"
+          }
+        },
+        "held_out_validated": false,
+        "validation_status": "candidate; held-out validation required",
+        "source_placeholder": false
+      },
+      "slow": {
+        "placeholder": false,
+        "status": "candidate; held-out validation required",
+        "temperature_by_kind": {
+          "choice": 4.362030930661031,
+          "score": 2.5936791093020193,
+          "noul": "one_bin"
+        },
+        "noul_calibration": {
+          "p_cal": 0.9
+        },
+        "by_type": {
+          "noul": {
+            "count": 6,
+            "p_cal": 0.999999,
+            "fitted": true,
+            "status": "insufficient"
+          },
+          "choice": {
+            "count": 8,
+            "temperature": 4.362030930661031,
+            "nll": 0.4556070099594048,
+            "fitted": true,
+            "status": "insufficient"
+          },
+          "score": {
+            "count": 1,
+            "temperature": 0.0625,
+            "nll": 0.0,
+            "fitted": true,
+            "status": "insufficient"
+          }
+        },
+        "held_out_validated": false,
+        "validation_status": "candidate; held-out validation required",
+        "source_placeholder": false
+      },
+      "fallback": {
+        "placeholder": false,
+        "status": "candidate; held-out validation required",
+        "temperature_by_kind": {
+          "choice": 2.5936791093020193,
+          "score": 2.5936791093020193,
+          "noul": "one_bin"
+        },
+        "noul_calibration": {
+          "p_cal": 0.81
+        },
+        "by_type": {
+          "noul": {
+            "count": 2,
+            "p_cal": 0.5,
+            "fitted": true,
+            "status": "insufficient",
+            "inherited_from": "fast"
+          },
+          "choice": {
+            "count": 3,
+            "temperature": 5.187358218604039,
+            "nll": 1.6009228608840418,
+            "fitted": true,
+            "status": "insufficient",
+            "inherited_from": "fast"
+          },
+          "score": {
+            "count": 2,
+            "temperature": 32.0,
+            "nll": 1.3879201599085709,
+            "fitted": true,
+            "status": "insufficient",
+            "inherited_from": "fast"
+          }
+        },
+        "held_out_validated": false,
+        "validation_status": "candidate; held-out validation required",
+        "source_placeholder": false
+      },
+      "placeholder": false,
+      "fitted_for": {
+        "model_key": "gemma-4-12b-awq",
+        "quant": "awq",
+        "adapter": null,
+        "prompt_sha": "e18ed7a06eb52f1b351458f384710a2c240aaf2b4f64d916b776c6d18ca3f938",
+        "backend": "vllm",
+        "margin_kind": "logratio",
+        "max_new_tokens": 512,
+        "reasoning_words": 300,
+        "max_prompt_tokens": 8192,
+        "request_contract": "typesafe.criteria.v1",
+        "placeholder": false,
+        "achieved": 0.15151515151515152,
+        "achieved_share": 0.15151515151515152,
+        "n": 231,
+        "fitted_on": "public231 fast_only 12b_calib15"
+      },
+      "status": "fitted from 12b_fastrows + 12b_routed10_on (public231, vLLM INT4); p_cal clamped >=0.81; degenerate slow score T replaced by fast score T; fallback = fast; slow p_cal 0.999999 (degenerate, small sample) capped at 0.90"
+    }
+  }
+}

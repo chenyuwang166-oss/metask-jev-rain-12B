@@ -1,0 +1,263 @@
+{
+  "model": {
+    "path": "",
+    "name": "metask-jev-rain-12B",
+    "quant": "awq",
+    "adapter": null,
+    "backend": "vllm",
+    "device_map": {
+      "": 0
+    },
+    "vllm_options": {
+      "gpu_memory_utilization": 0.85,
+      "max_num_seqs": 1
+    },
+    "model_key": "gemma-4-12b-awq",
+    "enable_prefix_caching": true,
+    "attn_implementation": "sdpa",
+    "vllm_expected_version": "0.31.0",
+    "version": "metask-jev-rain-12B"
+  },
+  "server": {
+    "bind": "127.0.0.1",
+    "port": 8000,
+    "max_request_bytes": 16777216,
+    "max_questions": 64,
+    "socket_timeout_seconds": 120,
+    "warmup": true,
+    "warmup_slow_tokens": 2
+  },
+  "prompt": {
+    "system": "You are a careful, decisive judge. Read the context, apply every rule, definition, threshold, exception and date it contains, and answer the question. Reply with exactly one word and nothing else.",
+    "enable_thinking": false,
+    "answer_marker": "ANSWER:",
+    "cot_instructions": {
+      "noul": "First reason step by step in at most {reasoning_words} words, tracking any intermediate state explicitly. Then output a final line of the form `ANSWER: yes` or `ANSWER: no`.",
+      "choice": "First reason step by step in at most {reasoning_words} words, tracking any intermediate state explicitly. Then output a final line `ANSWER: <letter>`.",
+      "score": "First reason step by step in at most {reasoning_words} words, tracking any intermediate state explicitly. Then output a final line `ANSWER: <number>`."
+    }
+  },
+  "generation": {
+    "reasoning_words": 300,
+    "max_new_tokens": 512,
+    "seed": 0,
+    "do_sample": false,
+    "temperature": 1.0,
+    "top_p": 1.0,
+    "top_k": 0,
+    "repetition_penalty": 1.0,
+    "suppress_tokens": null,
+    "begin_suppress_tokens": null,
+    "bad_words_ids": null,
+    "forced_bos_token_id": null,
+    "forced_eos_token_id": null,
+    "forced_decoder_ids": null,
+    "no_repeat_ngram_size": 0,
+    "min_new_tokens": 0,
+    "min_length": 0,
+    "length_penalty": 1.0,
+    "renormalize_logits": false,
+    "wall_timeout_seconds": 60
+  },
+  "routing": {
+    "mode": "routed",
+    "quota": 0.15,
+    "fuse": 0.2,
+    "state_dir": null,
+    "run_id": null,
+    "resume": false,
+    "slow_max_prompt_tokens": 48000,
+    "margin_kind": "logratio",
+    "margin_threshold": 2.9999032097890423,
+    "unparsed_policy": "fast",
+    "margin_threshold_fitted_for": {
+      "model_key": "gemma-4-12b-awq",
+      "quant": "awq",
+      "adapter": null,
+      "prompt_sha": "e18ed7a06eb52f1b351458f384710a2c240aaf2b4f64d916b776c6d18ca3f938",
+      "backend": "vllm",
+      "margin_kind": "logratio",
+      "max_new_tokens": 512,
+      "reasoning_words": 300,
+      "max_prompt_tokens": 8192,
+      "request_contract": "typesafe.criteria.v1",
+      "placeholder": false,
+      "achieved": 0.15151515151515152,
+      "achieved_share": 0.15151515151515152,
+      "n": 231,
+      "fitted_on": "public231 fast_only 12b_calib15"
+    },
+    "long_item_slow_policy": "fast_only",
+    "target_slow_share": 0.15,
+    "cost_fuse": {
+      "enabled": true,
+      "warmup": 100,
+      "arm": 0.85,
+      "release": 0.8
+    },
+    "tier": "normal",
+    "tiers": {
+      "normal": {
+        "max_prompt_tokens": 8192,
+        "fast_only": false
+      },
+      "hard": {
+        "reasoning_words": 300,
+        "max_new_tokens": 512,
+        "fast_only": false
+      },
+      "long": {
+        "max_prompt_tokens": 8192,
+        "fast_only": true
+      }
+    }
+  },
+  "calibration_file": "calibration.json",
+  "pricing": {
+    "model_key": "12B",
+    "models": {
+      "12B": {
+        "input_per_million": 0.05,
+        "output_per_million": 0.15,
+        "note": "Reference price assumption: google/gemma-3-12b-it is the nearest listed size class; OpenRouter has no gemma-4-12b listing. Not an actual Gemma 4 tariff."
+      }
+    },
+    "margin": 0.0,
+    "submission_models": {
+      "gemma-4-12b-awq": "12B",
+      "metask-jev-rain-12B": "12B"
+    }
+  },
+  "limits": {
+    "cost_per_1000_decisions_usd": 0.0646,
+    "median_latency_seconds": 1.23,
+    "max_prompt_tokens": 8192,
+    "truncation_head_frac": 0.6,
+    "physical_max_prompt_tokens": 16384,
+    "state_head_tokens": 512,
+    "state_tail_tokens": 512,
+    "state_chunk_tokens": 200,
+    "compression_reserve_tokens": 32,
+    "raw_median_latency_seconds": 0.54,
+    "precompression_trigger_chars_per_token": 8,
+    "estimated_chars_per_token": 4,
+    "oom_retry_prompt_tokens": 4096
+  },
+  "bench": {
+    "timeout_seconds": 120,
+    "output_prefix": "bench_run",
+    "expected_public_count": 231,
+    "long_tail": {
+      "count": 23,
+      "prompt_tokens": 79000,
+      "total_decisions": 1624,
+      "projection_budgets": [
+        8192
+      ]
+    },
+    "target_slow_share": 0.15,
+    "concurrency": [
+      1
+    ],
+    "latency_scale": 2.0,
+    "latency_offset_seconds": 0.15,
+    "original_types": false
+  },
+  "interface": {
+    "boolean_keys": "request"
+  },
+  "usage": {
+    "basis": "engine"
+  },
+  "profiles": {
+    "gemma-4-12b-awq": {
+      "model": {
+        "quant": "awq",
+        "name": "metask-jev-rain-12B",
+        "backend": "vllm"
+      },
+      "routing": {
+        "quota": 0.15,
+        "fuse": 0.2,
+        "target_slow_share": 0.15,
+        "margin_threshold": 2.9999032097890423,
+        "margin_threshold_fitted_for": {
+          "model_key": "gemma-4-12b-awq",
+          "quant": "awq",
+          "adapter": null,
+          "prompt_sha": "e18ed7a06eb52f1b351458f384710a2c240aaf2b4f64d916b776c6d18ca3f938",
+          "backend": "vllm",
+          "margin_kind": "logratio",
+          "max_new_tokens": 512,
+          "reasoning_words": 300,
+          "max_prompt_tokens": 8192,
+          "request_contract": "typesafe.criteria.v1",
+          "placeholder": false,
+          "achieved": 0.15151515151515152,
+          "achieved_share": 0.15151515151515152,
+          "n": 231,
+          "fitted_on": "public231 fast_only 12b_calib15"
+        },
+        "tier": "normal",
+        "tiers": {
+          "normal": {
+            "max_prompt_tokens": 8192,
+            "fast_only": false
+          },
+          "hard": {
+            "reasoning_words": 300,
+            "max_new_tokens": 512,
+            "fast_only": false
+          },
+          "long": {
+            "max_prompt_tokens": 8192,
+            "fast_only": true
+          }
+        }
+      },
+      "limits": {
+        "max_prompt_tokens": 8192,
+        "physical_max_prompt_tokens": 16384
+      },
+      "bench": {
+        "target_slow_share": 0.15
+      },
+      "pricing": {
+        "model_key": "12B"
+      },
+      "generation": {
+        "reasoning_words": 300,
+        "max_new_tokens": 512
+      }
+    }
+  },
+  "generation_reference": {
+    "intended_overrides": {
+      "do_sample": {
+        "value": false,
+        "reason": "Frozen greedy decoding; checkpoint sampling policy is intentionally overridden."
+      },
+      "temperature": {
+        "value": 1.0,
+        "reason": "Frozen greedy decoding; checkpoint sampling policy is intentionally overridden."
+      },
+      "top_p": {
+        "value": 1.0,
+        "reason": "Frozen greedy decoding; checkpoint sampling policy is intentionally overridden."
+      },
+      "top_k": {
+        "value": 0,
+        "reason": "Frozen greedy decoding; checkpoint sampling policy is intentionally overridden."
+      },
+      "suppress_tokens": {
+        "value": null,
+        "reason": "All reported measurements were taken without checkpoint token suppression; drafts only, fast-path candidate scoring unaffected."
+      }
+    }
+  },
+  "package": {
+    "version": "metask-jev-rain-12B",
+    "finalized": true,
+    "sample_only": false
+  }
+}

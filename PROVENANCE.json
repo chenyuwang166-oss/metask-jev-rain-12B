@@ -1,0 +1,34 @@
+{
+  "runtime_source": "exp/submission_v2",
+  "copy_policy": "UTF-8 LF normalized; r51 attention reporting; r52 explicit generation overrides and observed worker attention reporting",
+  "runtime_source_sha256": {
+    "server.py": "a02d50f71ea3935c5f68addcddaf698c9ab94e726670ed9f1ba7248d513d8742",
+    "core.py": "5b418a40994adebb077d4f8be08b55008138318875d231c73c1b1559df5dda16",
+    "backends.py": "8a3395d8417404686659a8191a6ec01006a68609241767a475b44f09b7240094",
+    "quota.py": "f785d6a08fa9fe509ce80854309e59f3abad56b3b36155b80fa089a087d2a7be",
+    "bench.py": "1fb180b1aca6d1da204878a65e5d4329cc32135375f275e5137e21912b48566f",
+    "reconcile_usage.py": "4d7b1045d71911c37e23c34b66a85212776762a635b67159aa13dc02a3159ad7"
+  },
+  "runtime_package_sha256": {
+    "server.py": "1f4996fe35d4c97dd3e9a0a716029cc7a360ace9b14fa89691ceaaa7fbc26cca",
+    "core.py": "dd042bd3172d442674b710fa6babf782e7ba17cef1eeac1e56d74358b23f2b57",
+    "backends.py": "2e30d80863ac6b2aa2a9909eb770a4185a868f9067e2959729875c5f4d9e87c4",
+    "quota.py": "83502853e0ad7aff422510dd177d7cb6205de0086aa25032063f95e8d73898d9",
+    "bench.py": "7d26e3bf20032352e76a004d254c96f4a24b5ad27cf339340ab2de4c61f51afd",
+    "reconcile_usage.py": "80deaca1a3673091d495effa7008819a3a134f06d1a46691795519215efc60a8"
+  },
+  "fitted_source_sha256": {
+    "config.fitted.json": "9e6912aa8b2d7541f2519c28ecda3ea78f9161e0bb04726ac8182c3ad11f2e7c",
+    "calibration.fitted.json": "85f7151fd667285bc604004c8134bb9ad15cb3853f73649d9070becaeed68df1"
+  },
+  "threshold_policy": "Keep full fitted precision; displayed as approximately 2.9999",
+  "hardware": "RTX 4090 24 GB",
+  "model_run_during_packaging": false,
+  "runtime_modifications": {
+    "server.py": "r52 + 10-08 ψ: attention backend not reported -> info only, not a warning",
+    "core.py": "r52: intended generation overrides in health info",
+    "backends.py": "r52: value-scoped generation overrides; query loaded worker attention layers",
+    "launch.py": " | 10-08 ψ: readiness error includes health JSON",
+    "model_setup.py": "10-08 ψ: offline-only check; serving never downloads (evaluators run without network)"
+  }
+}

@@ -1,0 +1,29 @@
+{
+  "sample_only": true,
+  "model_key": "gemma-4-12b-awq",
+  "backend": "vllm",
+  "quant": "awq",
+  "prompt_sha": "e18ed7a06eb52f1b351458f384710a2c240aaf2b4f64d916b776c6d18ca3f938",
+  "threshold": 1.234,
+  "achieved": 0.1,
+  "n": 231,
+  "quota": 0.15,
+  "fuse": 0.2,
+  "calibration": {
+    "fast": {
+      "p_cal": 0.8,
+      "T_choice": 1.1,
+      "T_score": 1.2
+    },
+    "slow": {
+      "p_cal": 0.8,
+      "T_choice": 1.1,
+      "T_score": 1.2
+    },
+    "fallback": {
+      "p_cal": 0.8,
+      "T_choice": 1.1,
+      "T_score": 1.2
+    }
+  }
+}

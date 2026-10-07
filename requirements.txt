@@ -1,0 +1,7 @@
+# Minimal runtime installation; pip resolves vLLM's transitive dependencies.
+--index-url https://download.pytorch.org/whl/cu130
+--extra-index-url https://pypi.org/simple
+vllm==0.31.0
+torch==2.13.0+cu130
+huggingface-hub
+# Optional exact measured environment: pip install -r requirements.lock
