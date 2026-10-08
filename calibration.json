@@ -133,9 +133,9 @@
         "achieved": 0.15151515151515152,
         "achieved_share": 0.15151515151515152,
         "n": 231,
-        "fitted_on": "public231 fast_only 12b_calib15"
+        "fitted_on": "public JevBench 231 items, fast-only run"
       },
-      "status": "fitted from 12b_fastrows + 12b_routed10_on (public231, vLLM INT4); p_cal clamped >=0.81; degenerate slow score T replaced by fast score T; fallback = fast; slow p_cal 0.999999 (degenerate, small sample) capped at 0.90"
+      "status": "fitted from a fast-only run and a routed run (public JevBench 231 items, vLLM INT4); p_cal clamped >=0.81; degenerate slow score T replaced by fast score T; fallback = fast; slow p_cal 0.999999 (degenerate, small sample) capped at 0.90"
     }
   }
 }

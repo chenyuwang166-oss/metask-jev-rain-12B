@@ -1,7 +1,11 @@
-# Minimal runtime installation; pip resolves vLLM's transitive dependencies.
+# Maintainer venv (install.sh): the exact versions that launch.py enforces; pip resolves the rest.
+# The evaluation image ships these versions; requirements.lock records the full measured environment.
 --index-url https://download.pytorch.org/whl/cu130
 --extra-index-url https://pypi.org/simple
 vllm==0.31.0
 torch==2.13.0+cu130
-huggingface-hub
-# Optional exact measured environment: pip install -r requirements.lock
+transformers==5.17.0
+tokenizers==0.23.2
+triton==3.7.1
+compressed-tensors==0.17.0
+huggingface-hub==1.33.0

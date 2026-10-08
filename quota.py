@@ -178,8 +178,16 @@ class QuotaCounter:
         self.fuse = float(fuse)
         self._quota = Decimal(str(quota))
         self._fuse = Decimal(str(fuse))
-        self.state_path = Path(state_path).resolve()
+        target = Path(state_path)
+        if not target.is_absolute():
+            raise QuotaStateError("Quota state path must be absolute")
+        # Symbolic links are resolved first; state and lock must stay beside each other, outside the package.
+        self.state_path = target.resolve()
+        if self.state_path.is_relative_to(_ROOT) or _ROOT.is_relative_to(self.state_path):
+            raise QuotaStateError("Quota state must be separate from the package")
         self.lock_path = self.state_path.with_name(self.state_path.name + ".lock")
+        if self.lock_path.resolve().parent != self.state_path.parent:
+            raise QuotaStateError("Quota lock must stay inside its state directory")
         key = os.path.normcase(str(self.state_path))
         with _REGISTRY_MUTEX:
             self._lock = _PATH_LOCKS.setdefault(key, _PathLock())
@@ -320,7 +328,7 @@ class QuotaCounter:
                 self._lock.local.active_decision = False
 
 class RuntimeCounter:
-    """Run-scoped durable counter, switching permanently to conservative memory on IO failure."""
+    """Run-scoped durable counter: startup IO failures abort; later IO failures use fast only."""
     def __init__(self, config):
         import logging
         import uuid
@@ -332,7 +340,17 @@ class RuntimeCounter:
         self._mutex = threading.RLock()
         self._state = {'total':0, 'slow':0}
         self.durable = None
-        directory = Path(routing.get('state_dir') or (Path(tempfile.gettempdir()) / 'submission_v2')) / self.run_id
+        if not routing.get('state_dir') or not Path(routing['state_dir']).is_absolute():
+            raise QuotaStateError('An absolute quota state directory is required; refusing startup')
+        state = Path(routing['state_dir']).resolve()
+        if state.is_relative_to(_ROOT) or _ROOT.is_relative_to(state):
+            raise QuotaStateError('Quota state directory must be separate from the package')
+        directory = (state / self.run_id).resolve()
+        if directory.parent != state:
+            raise QuotaStateError('Run directory must stay inside the state directory')
+        for name in ('run.json', 'quota.json', 'quota.json.lock'):
+            if (directory / name).resolve().parent != directory:
+                raise QuotaStateError('Run files must stay inside the run directory')
         fingerprint = {k:routing[k] for k in ('mode','quota','fuse')}
         fingerprint.update(model_key=config['model']['model_key'], run_id=self.run_id,
             tier=routing.get('tier'), tiers=routing.get('tiers'), cost_fuse=routing.get('cost_fuse'),
@@ -350,14 +368,14 @@ class RuntimeCounter:
                 if directory.exists():
                     raise ValueError('run_id already exists; select a new run_id or explicit resume')
                 directory.mkdir(parents=True, exist_ok=False)
-                (directory/'run.json').write_text(json.dumps(fingerprint), encoding='utf-8')
+                with (directory/'run.json').open('x', encoding='utf-8') as handle:
+                    handle.write(json.dumps(fingerprint))
             self.durable = QuotaCounter(directory/'quota.json', quota=routing['quota'], fuse=routing['fuse'])
             self._state = self.durable.snapshot()
         except (OSError, QuotaStateError):
             if routing.get('resume'):
                 raise ValueError('Resume state cannot be read or validated') from None
-            self.memory_only = True
-            logging.warning('Quota persistence unavailable; using memory counts and fast only')
+            raise QuotaStateError('Quota persistence unavailable; refusing startup') from None
 
     def configure_cost(self, config):
         configure_cost(self, config)

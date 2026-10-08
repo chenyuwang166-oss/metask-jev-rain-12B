@@ -1,30 +1,29 @@
-"""提交前用量对账：只读 bench 输出与引擎计数快照，不发推理请求，不读请求内容。
+"""Usage reconciliation before release (maintainer tool): reads bench outputs and engine counter
+snapshots only; sends no inference requests and reads no request content.
 
-python -B exp/submission_v2/reconcile_usage.py --run runs/r34_on [--run-off runs/r34_off] [--tol 0.001]
-退出码：0 通过；1 等式不成立；2 前置条件不满足（数据不全、计数器缺失）。
+python3 -B reconcile_usage.py --run /abs/out/fast [--run-off /abs/out/routed_off] [--tol 0.001]
+Exit code: 0 passed; 1 an identity does not hold; 2 a precondition is not met (missing data or counters).
 """
 import argparse, json, sys, math
 from pathlib import Path
 
-ROOT = Path(__file__).resolve().parent
+from core import external_path
+
 COUNTERS = ('prompt_tokens', 'generation_tokens', 'prefix_cache_queries', 'prefix_cache_hits',
             'num_preemptions', 'request_success')
 FIELDS = ('input', 'output', 'total', 'cached', 'submitted', 'calls', 'generated')
 
 
 def resolve(prefix):
-    p = Path(prefix).expanduser()
-    p = (p if p.is_absolute() else ROOT / p).resolve()
-    if not p.is_relative_to(ROOT):
-        raise SystemExit('prefix must stay inside submission_v2')
-    return p
+    """Run prefixes are absolute paths outside the package (see bench.py --output-prefix)."""
+    return external_path(prefix)
 
 
 def load(prefix):
     p = resolve(prefix)
     rows = [json.loads(x) for x in p.with_name(p.name + '.jsonl').read_text(encoding='utf-8').splitlines() if x.strip()]
     stats = json.loads(p.with_name(p.name + '.engine_stats.json').read_text(encoding='utf-8'))
-    rows = [r for r in rows if r.get('concurrency', 1) == 1]     # 只对串行档对账
+    rows = [r for r in rows if r.get('concurrency', 1) == 1]     # reconcile the serial level only
     if not rows:
         sys.exit(2)
     return p, rows, stats
@@ -99,7 +98,7 @@ def reconcile_one(rows, stats, tol):
         fails.append('sum(engine_submitted) matches neither engine prompt-counter definition')
     if not close(S['cached'], D['prefix_cache_hits'], tol):
         fails.append('sum(cached_tokens) != delta prefix_cache_hits')
-    if prefill is not None and not close(S['input'], prefill, tol):            # 等式一
+    if prefill is not None and not close(S['input'], prefill, tol):            # identity E1
         fails.append('E1: sum(usage.input_tokens) != engine prefill')
     if not close(S['output'], D['generation_tokens'], tol):
         fails.append('sum(usage.output_tokens) != delta generation_tokens')
@@ -122,7 +121,7 @@ def reconcile_pair(on_rows, off_rows, off_stats, tol):
         fails.append('decode drift: only %.1f%% rows identical between runs' % (100 * coverage))
     diff = sum(off[i]['input'] - on[i]['input'] for i in matched)
     cached = sum(on[i]['cached'] for i in matched)
-    if not close(diff, cached, tol):                                             # 等式二
+    if not close(diff, cached, tol):                                             # identity E2
         fails.append('E2: sum(input_off) - sum(input_on) != sum(cached_on)')
     return dict(matched=len(matched), coverage=coverage, input_diff=diff, cached_on=cached), fails
 
@@ -135,17 +134,19 @@ def main(argv=None):
     a = ap.parse_args(argv)
     if not 0<=a.tol<=0.001: ap.error('tol must be within [0, 0.001]')
     try: path, rows, stats = load(a.run)
-    except (OSError,ValueError,KeyError): return 2
+    except (OSError,ValueError,KeyError) as exc:
+        print('precondition: '+str(exc), file=sys.stderr); return 2
     report, fails = reconcile_one(rows, stats, a.tol)
     if a.run_off:
         try: _, off_rows, off_stats = load(a.run_off)
-        except (OSError,ValueError,KeyError):return 2
+        except (OSError,ValueError,KeyError) as exc:
+            print('precondition: '+str(exc), file=sys.stderr); return 2
         off_report, off_fails = reconcile_one(off_rows, off_stats, a.tol)
         pair, pair_fails = reconcile_pair(rows, off_rows, off_stats, a.tol)
         report.update(off=off_report, pair=pair)
         fails += ['off: ' + f for f in off_fails] + pair_fails
     report.update(tolerance=a.tol, passed=not fails, submission_ready=bool(a.run_off) and not fails, failures=fails)
-    with path.with_name(path.name + '.reconcile.json').open('x', encoding='utf-8') as out:   # 独占创建，不覆盖
+    with path.with_name(path.name + '.reconcile.json').open('x', encoding='utf-8') as out:   # exclusive create, never overwrite
         json.dump(report, out, ensure_ascii=False, indent=2, allow_nan=False)
     print(json.dumps({'passed': not fails, 'failures': fails}, ensure_ascii=False))
     return 0 if not fails else (2 if any('precondition' in f for f in fails) else 1)

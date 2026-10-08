@@ -1,4 +1,4 @@
-# Measured version lock; artifact hashes were not supplied.
+# Measured version lock; versions only, no artifact hashes.
 # All measured entries retained; torch CUDA build made explicit.
 --extra-index-url https://download.pytorch.org/whl/cu130
 agent-detector==2.0.0

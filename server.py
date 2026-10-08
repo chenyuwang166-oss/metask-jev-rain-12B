@@ -7,16 +7,26 @@ from http.server import BaseHTTPRequestHandler, ThreadingHTTPServer
 from pathlib import Path
 
 if __package__:
-    from .core import UnsupportedRequest, Service, ROOT, load_config, load_json, local_output, validate_config, apply_profile, validate_calibration, validate_threshold
+    from .core import ItemFailure, ServiceFailure, UnsupportedRequest, Service, ROOT, load_json, validate_config, apply_profile, validate_calibration, validate_threshold
 else:
-    from core import UnsupportedRequest, Service, ROOT, load_config, load_json, local_output, validate_config, apply_profile, validate_calibration, validate_threshold
+    from core import ItemFailure, ServiceFailure, UnsupportedRequest, Service, ROOT, load_json, validate_config, apply_profile, validate_calibration, validate_threshold
+
+BINDS = ("127.0.0.1", "0.0.0.0")
 
 
 def make_handler(service):
+    def service_dead():
+        check = getattr(service, 'is_dead', None)
+        return check() if callable(check) else getattr(service, 'dead', False)
+
     class Handler(BaseHTTPRequestHandler):
         protocol_version='HTTP/1.1'
 
         def handle_expect_100(self):
+            if self.command == 'POST' and service_dead():
+                self.close_connection=True
+                self.respond(503, {'error':'service failure'})
+                return False
             try:
                 n=int(self.headers.get('Content-Length','0'))
                 if n<=0 or n>service.config['server']['max_request_bytes'] or self.headers.get('Transfer-Encoding'):
@@ -51,17 +61,26 @@ def make_handler(service):
                     from .attention import attention_health
                 else:
                     from attention import attention_health
-                health=dict(service.health(), **attention_health(getattr(service.backend,'attention_backends',None)))
-                if health['attention_backend'] is None:
-                    health.setdefault('info',{})['attention_backend']='not reported by this vLLM build (informational only)'
+                health=service.health()
+                # Attention backend and runtime versions are information, never warnings.
+                info=health.setdefault('info',{})
+                info.update(attention_health())
+                info['runtime']=getattr(service.backend,'runtime_info',None)
                 self.respond(200, health)
             elif self.path.split('?',1)[0].rstrip('/') == '/engine_stats':
+                # Read-only engine counters for maintainer usage reconciliation; not used by evaluation.
                 try: self.respond(200,service.engine_stats())
                 except Exception: self.respond(503,{'error':'Engine counters unavailable'})
             else:
                 self.respond(404, {'error':'Unknown route'})
 
         def do_POST(self):
+            # After an unrecoverable engine error or the third consecutive item failure,
+            # every POST is answered 503 without reading or processing the request.
+            if service_dead():
+                self.close_connection=True
+                self.respond(503, {'error':'service failure'})
+                return
             if self.path.split("?", 1)[0].rstrip("/") != "/v1/systemone":
                 self.close_connection=True
                 self.respond(404, {"error": "Unknown route"})
@@ -92,19 +111,31 @@ def make_handler(service):
                 self.close_connection=True
                 self.respond(400, {"error": "Invalid systemone request"})
                 return
+            # Failures never produce a substitute answer: 422 for one item, 503 for the service.
             try:
                 result = service.answer(payload)
-                json.dumps(result,allow_nan=False)
-            except Exception:
-                if __package__: from .core import emergency_response
-                else: from core import emergency_response
-                result=emergency_response(payload,service.config)
+                json.dumps(result, allow_nan=False)
+            except ItemFailure as exc:
+                print("item failure: "+type(exc.__cause__ or exc).__name__, flush=True)
+                self.respond(422, {"error": "item could not be processed"})
+                return
+            except ServiceFailure as exc:
+                print("service failure: "+str(exc), flush=True)
+                self.respond(503, {"error": "service failure"})
+                return
+            except Exception as exc:
+                print("service failure: "+type(exc).__name__, flush=True)
+                self.respond(503, {"error": "service failure"})
+                return
             self.respond(200, result)
 
     return Handler
 
 
 class QuietHTTPServer(ThreadingHTTPServer):
+    # Request workers must not keep a stopped service alive while draining.
+    daemon_threads = True
+
     def handle_error(self, request, client_address):
         # The base implementation prints a peer endpoint on disconnected clients.
         print("HTTP connection failed", flush=True)
@@ -117,11 +148,11 @@ def main(argv=None):
     parser.add_argument("--quant", choices=("int8", "bf16", "awq"))
     parser.add_argument("--adapter")
     parser.add_argument("--backend", choices=("transformers", "vllm"))
-    parser.add_argument("--bind", help="Required unless server.bind is set in config")
+    parser.add_argument("--bind", choices=BINDS, help="Listening address; defaults to server.bind in config")
     parser.add_argument("--port", type=int)
     parser.add_argument("--mode", choices=("routed", "uniform", "fast_only"))
     parser.add_argument("--calibration", type=Path)
-    parser.add_argument('--state-dir', type=Path)
+    parser.add_argument('--state-dir', type=Path, help='Absolute directory for run state (required)')
     parser.add_argument('--run-id')
     parser.add_argument('--resume', action='store_true')
     parser.add_argument('--model-key')
@@ -130,6 +161,8 @@ def main(argv=None):
     parser.add_argument('--no-prefix-caching',action='store_true')
     parser.add_argument('--allow-placeholder-threshold',action='store_true')
     args = parser.parse_args(argv)
+    if args.state_dir is None or not args.state_dir.is_absolute():
+        parser.error("--state-dir must be given as an absolute path")
     c = load_json(args.config)
     for arg, field in (("model", "path"), ("quant", "quant"), ("adapter", "adapter"), ("backend", "backend")):
         if getattr(args, arg) is not None:

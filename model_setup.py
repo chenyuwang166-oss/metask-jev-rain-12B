@@ -1,19 +1,14 @@
-"""Fill missing processor configs before starting the offline model process."""
-import hashlib
-import json
-import shutil
+"""Report a missing processor config in the model folder; never downloads or copies."""
 from pathlib import Path
 
-NAMES=('processor_config.json','preprocessor_config.json','video_preprocessor_config.json')
-BASE='google/gemma-4-12b-it'
+# Gemma 4 keeps its processor settings in processor_config.json; the checkpoint has no
+# preprocessor_config.json or video_preprocessor_config.json and needs neither.
+NAMES=('processor_config.json',)
 
-def ensure_processors(model_dir):
-    """Offline-only check. The serving process never touches the network (evaluators run it
-    with networking disabled). Missing optional processor configs are reported, not fetched;
-    prepare_model.sh is the only step that downloads anything. The Gemma 4 INT4 checkpoint
-    serves text decisions without preprocessor/video configs (verified on vLLM 0.31)."""
+def report_processor_configs(model_dir):
+    """Print nothing for a complete model folder; return the missing names."""
     p=Path(model_dir)
     missing=[n for n in NAMES if not (p/n).is_file()]
     if missing:
-        print('[model_setup] optional processor configs absent (not needed for text): '+', '.join(missing),flush=True)
+        print('[model_setup] processor config not in the model folder: '+', '.join(missing),flush=True)
     return missing

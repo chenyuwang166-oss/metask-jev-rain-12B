@@ -85,7 +85,7 @@
       "achieved": 0.15151515151515152,
       "achieved_share": 0.15151515151515152,
       "n": 231,
-      "fitted_on": "public231 fast_only 12b_calib15"
+      "fitted_on": "public JevBench 231 items, fast-only run"
     },
     "long_item_slow_policy": "fast_only",
     "target_slow_share": 0.15,
@@ -196,7 +196,7 @@
           "achieved": 0.15151515151515152,
           "achieved_share": 0.15151515151515152,
           "n": 231,
-          "fitted_on": "public231 fast_only 12b_calib15"
+          "fitted_on": "public JevBench 231 items, fast-only run"
         },
         "tier": "normal",
         "tiers": {

@@ -1,107 +1,117 @@
 # metask-jev-rain-12B
 
-## Quick start
+A self-hosted decision service for JevBench. It serves `POST /v1/systemone` for the unchanged
+`typesafe` adapter of the official harness, and `GET /health`. It loads a frozen community INT4
+checkpoint of Gemma 4 12B with its weights unchanged. Facts, use of public items and measurements
+are in [DISCLOSURE.md](DISCLOSURE.md).
 
-Linux, Bash, Python 3.10 and an NVIDIA GPU with at least 24 GB (measured on RTX 4090 24 GB).
-Copy the commands as they are. Steps 1–5 run in terminal 1; steps 6–7 in terminal 2.
-The service serves `POST /v1/systemone` and `GET /health`, so the unchanged `typesafe`
-adapter of the official JevBench harness reaches it. Serving runs fully offline.
+## Requirements
 
-1. Clone and check out the submitted commit, then enter the package.
-   ```bash
-   git clone https://github.com/chenyuwang166-oss/metask-jev-rain-12B && cd metask-jev-rain-12B && git checkout v1.0-frozen
-   ```
-2. Create and activate the model environment.
-   ```bash
-   python3.10 -m venv ../jev12b-venv && source ../jev12b-venv/bin/activate
-   ```
-3. Install the runtime.
-   ```bash
-   pip install -r requirements.txt
-   ```
-4. Download the pinned community INT4 weights.
-   ```bash
-   bash prepare_model.sh ../jev12b-model
-   ```
-5. Start the service (foreground; wait for the printed health result).
-   ```bash
-   bash serve.sh --model ../jev12b-model
-   ```
-6. Check readiness: `status: "ok"` and empty `warnings`.
-   ```bash
-   curl --fail http://localhost:8000/health
-   ```
-7. Run the official TypeSafe adapter; use a fresh `RUN_DIR` for each evaluation.
-   ```bash
-   "$JEVBENCH_PYTHON" -m jevbench.cli run --adapter typesafe --endpoint http://localhost:8000 --model metask-jev-rain-12B --key-env '' --price-in-per-m 0.05 --price-out-per-m 0.15 --tasks "$TASKS_JSONL" --results "${RUN_DIR:?Set a fresh results directory}/results.jsonl" --ledger "$RUN_DIR/ledger.jsonl" --raw-dir "$RUN_DIR/raw" --manifest "$RUN_DIR/manifest.json" --cap-usd 15
-   ```
+- One NVIDIA GPU used only by this service: at least 24 GB of memory, compute capability 8.0 or
+  newer, NVIDIA driver 580 or newer. The commands use the host's GPU 0 (`--gpus '"device=0"'`).
+- Docker with the NVIDIA Container Toolkit.
+- Runtime image `vllm/vllm-openai@sha256:a4a4c0437bf7240089da5f08aa370c4aee17ae5290f7a3b468825ee26c4c3a6b`
+  (Python 3.12.3, vLLM 0.31.0, torch 2.13.0+cu130). It is the linux/amd64 image of vLLM release
+  `v0.31.0` with index digest `sha256:c1c9f6fd5c109ba7f0546a59f5b2f15fb87f64c77782e90a27b648b42a8e67c3`,
+  linux/amd64 manifest digest `sha256:a4a4c0437bf7240089da5f08aa370c4aee17ae5290f7a3b468825ee26c4c3a6b`
+  (used in the commands) and config digest
+  `sha256:c76d0e2225a4b1cb1e2109ace39639f55e714abd1a7a427acc8b0bbd7f6a83b3` (the classic Docker image
+  store shows the config digest as the image ID; the containerd image store identifies images by
+  manifest or index digest, depending on the reference used when pulling).
+  Nothing is installed and the service has no network access.
+- Model folder: the files of
+  https://huggingface.co/cyankiwi/gemma-4-12B-it-qat-AWQ-INT4/tree/12deda07c573047b191b63f0768c0412120f3ed4
+  as regular files, for example downloaded with
+  `hf download cyankiwi/gemma-4-12B-it-qat-AWQ-INT4 --revision 12deda07c573047b191b63f0768c0412120f3ed4 --local-dir "$MODEL"`.
+  A Hugging Face cache `snapshots/<revision>` directory holds links into `../../blobs` and cannot be
+  mounted on its own. No preparation step: Gemma 4 keeps its processor settings in
+  `processor_config.json`, so the folder has no `preprocessor_config.json` or
+  `video_preprocessor_config.json`. At startup the service checks the SHA-256 of seven small files
+  and the sizes of the three weight shards, and refuses other weight, tokenizer or processor files
+  in the folder; it never writes to the folder.
+- Code: this repository at the commit given in the submission email.
+- Harness: https://github.com/fstandhartinger/jevbench/tree/bb05a335bc809e61b20c0f745d25499a82b326fc
 
-## Installation and model preparation
+## Run
 
-`requirements.txt` pins only the main runtime (vLLM 0.31.0 and torch
-2.13.0+cu130) and includes Hugging Face Hub for preparation. It uses the PyTorch
-cu130 index plus PyPI; pip resolves transitive dependencies. The supplied
-201-entry `requirements.lock` remains an optional exact-version reproduction
-path: `pip install -r requirements.lock`. It is not a wheel-hash lock.
-`install.sh` is an optional venv helper using the minimal requirements.
-The launcher checks only vLLM major 0 and torch major 2, not the full lock;
-Python 3.10 remains required. Use the pinned requirements for the submitted run.
-
-`prepare_model.sh` downloads only the checkpoint repository
-`cyankiwi/gemma-4-12B-it-qat-AWQ-INT4` at
-`12deda07c573047b191b63f0768c0412120f3ed4`, verifies INT4 metadata and records
-weight hashes in the external model directory. No separate processor command
-is needed. At startup, missing processor configs are copied from
-`google/gemma-4-12b-it` only when present there. Existing configs are preserved;
-the resolved base revision, copied hashes and absent filenames are recorded in
-`PREPARATION.json`. First startup may need network access and authorized model
-access. Subsequent startup reuses this record; the model child runs offline.
-
-## Runtime and health
-
-`--state-dir` defaults to `./state` relative to the package directory;
-`--run-id` defaults to a UTC timestamp with microseconds. Both remain optional
-explicit overrides. Restart the foreground service for each independent run.
-Ctrl-C stops the service and its engine process group.
-
-`generation_reference.intended_overrides` declares the frozen greedy settings.
-Only differences matching the declared values while greedy decoding is active
-are informational: `/health.info.intended_overrides` records checkpoint values,
-configured values and reasons. Unexpected differences and unreadable/missing
-metadata still warn. An unknown actual attention backend also warns.
-
-Actual backend names come first from loaded worker attention layers, then from
-engine logs (including readable names such as Flash Attention). Requested backend
-settings are reported separately. No request value is treated as proof of the
-active implementation. Startup tries auto, then FLASH_ATTN, then TRITON_ATTN on
-engine initialization failure. Attempt logs live under
-`<state-dir>/<run-id>-startup/`; each attempt has isolated quota state.
-The FlashInfer sampler and telemetry are disabled.
-
-## Frozen behavior and evidence
-
-Frozen `google/gemma-4-12b-it`, community INT4 weights, single-forward readout
-with a short draft for the low-confidence 15% routing budget. Threshold
-2.9999032097890423; quota 0.15; fuse 0.20; draft limit 300 words / 512 tokens;
-long inputs compressed to 8192 and fast-only; actual engine usage accounting.
-Public-data calibration is not held-out validation.
-
-Supplied measured result: 231/231 tasks, accuracy 0.879, USD 0.047 per 1k,
-p50 0.055 s, RTX 4090. Price uses the declared reference assumption of
-USD 0.05 / 0.15 per million input/output tokens, not hardware running costs.
-This packaging revision was checked offline; it has not rerun the model or
-verified a fresh dependency installation. See DISCLOSURE.md for evidence fields,
-harness.md for evaluator details, and environment.md for dependency provenance.
-
-## Optional integrity check
+Copy the commands as they are, in the same Bash terminal. First set four absolute host paths and
+the task list:
 
 ```bash
-sha256sum -c MANIFEST.sha256
+PKG=/abs/path/to/metask-jev-rain-12B            # this repository, mounted read-only
+MODEL=/abs/path/to/gemma-4-12B-it-qat-AWQ-INT4  # the model folder above, mounted read-only
+WORK=/abs/path/to/new-work-dir                  # new for each evaluation; the only place anything is written
+JEVBENCH=/abs/path/to/jevbench                  # the harness checkout above, mounted read-only
+TASKS=/jevbench/datasets/public/easy.jsonl,/jevbench/datasets/public/original.jsonl,/jevbench/datasets/public/hard.jsonl  # container paths
 ```
 
-The LF manifest covers package files except itself; clone metadata, Python caches
-and default runtime state are excluded. Keep environments, weights and evaluation
-outputs outside the package. Maintainers must fill the package commit and UTC
-freeze time before submission, then regenerate the manifest. FORM_NOTES.md is
-the concise form draft. PROVENANCE.json retains original hashes and records the
-delivered runtime hashes.
+`TASKS` is the comma-separated list of task files as seen inside the container: a file below
+`$JEVBENCH` is below `/jevbench`, a file below `$WORK` is below `/work`. The value above is the
+public set. Task paths cannot contain commas. Start with an empty `WORK`; the only files you may put
+there are task files. `WORK` must be on a local filesystem that the container user can write to and
+that is not mounted `noexec` (compiled kernels are loaded from `$WORK/state/cache`).
+
+1. Start the service:
+
+   ```bash
+   docker run -d --name jev12b --init --gpus '"device=0"' --network none --read-only --shm-size 8g \
+     -v "$PKG":/pkg:ro -v "$MODEL":/model:ro -v "$WORK":/work -v "$JEVBENCH":/jevbench:ro \
+     --entrypoint bash vllm/vllm-openai@sha256:a4a4c0437bf7240089da5f08aa370c4aee17ae5290f7a3b468825ee26c4c3a6b \
+     /pkg/serve.sh --model /model --state-dir /work/state --run-id run1
+   ```
+
+2. Follow the log until the service is ready:
+
+   ```bash
+   docker logs -f jev12b
+   ```
+
+   Startup loads and compiles the model. When a line starting with `{"status": "ok"` appears, press
+   Ctrl-C (this ends only the log display) and go to step 3. If the log ends before that line, the
+   container has exited: the reason is in `docker logs jev12b` and in
+   `$WORK/state/run1-startup/attempt-*.log`; go to step 4. After correcting the cause, use a new
+   `WORK` and restart from step 1.
+
+3. Run the official harness in the same container, then summarize:
+
+   ```bash
+   docker exec -e PYTHONPATH=/jevbench jev12b python3 -B -m jevbench.cli run --adapter typesafe \
+     --endpoint http://127.0.0.1:8000 --model metask-jev-rain-12B --key-env '' --tasks "$TASKS" \
+     --results /work/run1/results.jsonl --ledger /work/run1/ledger.jsonl --raw-dir /work/run1/raw \
+     --manifest /work/run1/manifest.json --cap-usd 15 --price-in-per-m 0.05 --price-out-per-m 0.15
+   docker exec -e PYTHONPATH=/jevbench jev12b python3 -B -m jevbench.cli summarize --tasks "$TASKS" \
+     --results /work/run1/results.jsonl --ledger /work/run1/ledger.jsonl
+   ```
+
+4. Stop and remove the container:
+
+   ```bash
+   docker stop -t 40 jev12b && docker rm jev12b
+   ```
+
+Each evaluation uses a new `WORK` and a new container (step 4 removes the previous one); the run
+name stays `run1` because `WORK` is new. The slow-path quota is counted per run in arrival order, so
+a run always starts from a freshly started service.
+
+## What to expect
+
+- Health line: `"status": "ok"`, `"warnings": []`, `"model_key": "gemma-4-12b-awq"`,
+  `"mode": "routed"`, `"prefix_caching": true`, `"supports_slow_session": true`.
+  `info.attention_backend` names the attention backend vLLM selected (DISCLOSURE, section 4);
+  `info.runtime` lists the Python, vLLM, torch, transformers, tokenizers, triton and
+  compressed-tensors versions, the CUDA version of torch and the GPU name.
+- Startup: each startup attempt waits at most 1800 s for readiness. The first attempt lets vLLM
+  select the attention backend; only if the engine fails to start does a second attempt request
+  `TRITON_ATTN`. The log of attempt N is `$WORK/state/run1-startup/attempt-N.log`.
+- Writes: the service writes files only below `$WORK/state` (plus shared memory in `/dev/shm`) and
+  the harness only below `$WORK/run1`. The service creates `state/run1-startup/` (`attempts.jsonl`,
+  `attempt-N.log`, quota state `state-N/`, `tmp/`, `home/`) and `state/cache/` (compilation caches).
+  The package and model mounts are read-only. Cache and configuration path variables (`HF_HOME`,
+  `XDG_*`, `TRITON_*`, `TORCH_HOME` and similar) must not be passed to the container: a value outside
+  `/work/state` is refused at startup.
+- Responses: an item the service cannot process returns HTTP 422 without answer and without usage;
+  the harness scores it as wrong, and because that item has no cost, `summarize` reports the price
+  per 1,000 decisions as null. After an engine failure, and from the third consecutive item failure
+  on, the service answers every `POST /v1/systemone` with HTTP 503 and `/health` reports
+  `"status": "error"`; the harness stops after three consecutive 503 responses. No substitute answer
+  is ever returned (DISCLOSURE, section 4).

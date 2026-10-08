@@ -10,7 +10,7 @@
   "quota": 0.15,
   "fuse": 0.2,
   "calibration_status": "Public231 fitted; held-out validation not performed",
-  "model_calibration_status": "fitted from 12b_fastrows + 12b_routed10_on (public231, vLLM INT4); p_cal clamped >=0.81; degenerate slow score T replaced by fast score T; fallback = fast; slow p_cal 0.999999 (degenerate, small sample) capped at 0.90",
+  "model_calibration_status": "fitted from a fast-only run and a routed run (public JevBench 231 items, vLLM INT4); p_cal clamped >=0.81; degenerate slow score T replaced by fast score T; fallback = fast; slow p_cal 0.999999 (degenerate, small sample) capped at 0.90",
   "calibration": {
     "fast": {
       "placeholder": false,
@@ -133,7 +133,7 @@
       "validation_status": "candidate; held-out validation required"
     }
   },
-  "fitted_on": "public231 fast_only 12b_calib15",
+  "fitted_on": "public JevBench 231 items, fast-only run",
   "source_fitted_for": {
     "placeholder": false,
     "model_key": "gemma-4-12b-awq",
@@ -146,7 +146,7 @@
     "adapter": null,
     "reasoning_words": 300,
     "backend": "vllm",
-    "fitted_on": "public231 fast_only 12b_calib15",
+    "fitted_on": "public JevBench 231 items, fast-only run",
     "achieved_share": 0.15151515151515152
   },
   "source_calibration_fitted_for": {

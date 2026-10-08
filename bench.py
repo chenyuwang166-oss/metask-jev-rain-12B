@@ -1,4 +1,7 @@
-"""Sequential, model-free HTTP benchmark client for the submission v2 API."""
+"""Sequential, model-free HTTP benchmark client for the /v1/systemone service (maintainer tool).
+
+All outputs are created with exclusive mode at an absolute --output-prefix outside the package.
+"""
 
 import argparse
 import json
@@ -15,6 +18,8 @@ PUBLIC_FILES = (("easy.jsonl", "easy"), ("original.jsonl", "standard"), ("hard.j
 TYPES = ("noul", "choice", "score")
 ALIASES = {"boolean": "noul", "enum": "choice"}
 QUESTION_NAME = "decision"
+# Local service calls never go through an HTTP proxy.
+_OPENER = urllib.request.build_opener(urllib.request.ProxyHandler({}))
 
 
 def canonical_type(value):
@@ -168,7 +173,7 @@ def post_json(endpoint, payload, timeout):
     request = urllib.request.Request(endpoint_url(endpoint),
                                      data=json.dumps(payload).encode("utf-8"),
                                      headers={"Content-Type": "application/json"}, method="POST")
-    with urllib.request.urlopen(request, timeout=timeout) as response:
+    with _OPENER.open(request, timeout=timeout) as response:
         return json.load(response)
 
 
@@ -618,17 +623,17 @@ def fit_calibration(fast_rows, routed_rows, model_key):
 
 
 def read_run_rows(prefix):
-    if __package__:from .core import local_output
-    else:from core import local_output
-    path=local_output(prefix)
+    if __package__:from .core import external_path
+    else:from core import external_path
+    path=external_path(prefix)
     if path.suffix!='.jsonl':path=path.with_name(path.name+'.jsonl')
     return [json.loads(line) for line in path.read_text(encoding='utf-8-sig').splitlines() if line.strip()]
 
 
 def write_candidate(path,value):
-    if __package__:from .core import local_output
-    else:from core import local_output
-    target=local_output(path);target.parent.mkdir(parents=True,exist_ok=True)
+    if __package__:from .core import external_output
+    else:from core import external_output
+    target=external_output(path)
     with target.open('x',encoding='utf-8') as out:json.dump(value,out,ensure_ascii=False,indent=2,allow_nan=False)
     return target
 
@@ -654,27 +659,22 @@ def apply_margin_candidate(config, report, tier=None):
 def get_health(endpoint,timeout,path="/health"):
     parts=urllib.parse.urlsplit(endpoint)
     url=urllib.parse.urlunsplit((parts.scheme,parts.netloc,path,'',''))
-    with urllib.request.urlopen(url,timeout=timeout) as response:
+    with _OPENER.open(url,timeout=timeout) as response:
         return json.load(response)
 
 
 def output_paths(prefix, calibration_only=False):
-    candidate = Path(prefix).expanduser()
-    if not candidate.is_absolute():
-        candidate = ROOT / candidate
-    candidate = candidate.resolve()
-    if not candidate.is_relative_to(ROOT) or candidate == ROOT:
-        raise ValueError("output prefix must stay inside submission_v2")
+    if __package__:from .core import external_output
+    else:from core import external_output
+    candidate = external_output(prefix)
     if calibration_only:
         target=candidate.with_name(candidate.name+'.margin_calibration.json')
         if target.exists(): raise FileExistsError('Calibration output exists')
-        target.parent.mkdir(parents=True,exist_ok=True)
         return target
     rows_path = candidate.with_name(candidate.name + ".jsonl")
     summary_path = candidate.with_name(candidate.name + ".summary.json")
     if rows_path.exists() or summary_path.exists():
         raise FileExistsError("output already exists; choose a new prefix")
-    rows_path.parent.mkdir(parents=True, exist_ok=True)
     return rows_path, summary_path
 
 
@@ -686,7 +686,7 @@ def main(argv=None):
     source.add_argument("--data", type=Path)
     parser.add_argument("--index", type=Path)
     parser.add_argument("--endpoint", help="Runtime HTTP endpoint; never written to output")
-    parser.add_argument("--output-prefix")
+    parser.add_argument("--output-prefix", help="Absolute path prefix outside the package (required for runs)")
     parser.add_argument("--price-model", help="Key in config.pricing.models")
     parser.add_argument('--original-types',action='store_true')
     parser.add_argument('--concurrency',type=int,nargs='+')
@@ -714,6 +714,7 @@ def main(argv=None):
         write_candidate(args.output,apply_margin_candidate(config,json.loads(args.apply_margin.read_text(encoding='utf-8')),args.tier))
         return 0
     if not args.endpoint or not (args.public or args.data):parser.error('Benchmark needs endpoint and public or data')
+    if not args.output_prefix:parser.error('Benchmark needs --output-prefix (absolute, outside the package)')
     if args.P is not None:config['bench']['projection_prompt_tokens']=args.P
     if args.original_types: config['bench']['original_types']=True
     if args.price_model:
@@ -733,7 +734,7 @@ def main(argv=None):
     if args.calibrate_margin and levels!=[1]: parser.error('Margin calibration is serial')
     if args.calibrate_margin and args.engine_stats:parser.error('Use a separate serial run for engine reconciliation')
     endpoint = endpoint_url(args.endpoint)
-    paths = output_paths(args.output_prefix or config["bench"]["output_prefix"],calibration_only=args.calibrate_margin)
+    paths = output_paths(args.output_prefix,calibration_only=args.calibrate_margin)
     health=get_health(endpoint,config['bench']['timeout_seconds'])
     if __package__: from .core import apply_profile
     else: from core import apply_profile

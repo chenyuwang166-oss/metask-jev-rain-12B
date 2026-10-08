@@ -93,6 +93,35 @@ def install_forward_counter(backend):
     else:logging.warning('HF forward hook unavailable; usage estimated')
 
 
+def runtime_info():
+    """Versions on the numeric path and the visible GPU, reported in /health info.runtime.
+
+    The GPU name comes from vLLM's platform interface (NVML), so this process creates no CUDA
+    context. triton_module is the version of the triton module the process actually imported.
+    """
+    import importlib.metadata
+    import platform
+    import sys
+    info = {"python": platform.python_version()}
+    for name in ("vllm", "torch", "transformers", "tokenizers", "triton", "compressed-tensors"):
+        try:
+            info[name] = importlib.metadata.version(name)
+        except importlib.metadata.PackageNotFoundError:
+            info[name] = None
+    info["triton_module"] = getattr(sys.modules.get("triton"), "__version__", None)
+    try:
+        import torch
+        info["torch_cuda"] = torch.version.cuda
+    except Exception:
+        info["torch_cuda"] = None
+    try:
+        from vllm.platforms import current_platform
+        info["gpu"] = current_platform.get_device_name()
+    except Exception:
+        info["gpu"] = None
+    return info
+
+
 class TokenizerMixin:
     tokenizer: Any
 
@@ -108,7 +137,7 @@ class TokenizerMixin:
         return self.tokenizer.decode(list(ids), skip_special_tokens=True)
 
     def prompt_ids(self, system: str, text: str, enable_thinking: bool = False) -> list[int]:
-        # Match cache_hidden_v2: the instructions and context share a user turn.
+        # The instructions and the context share one user turn, as in all measured runs.
         messages = [{"role": "user", "content": system + "\n\n" + text}]
         try:
             prompt = self.tokenizer.apply_chat_template(
@@ -360,6 +389,7 @@ class VLLMBackend(TokenizerMixin):
             "max_logprobs", "logprobs_mode", "seed", "enable_lora",
             "generation_config", "override_generation_config", "logits_processors",
             "skip_tokenizer_init", "speculative_config", "enable_prefix_caching", "disable_log_stats",
+            "attention_backend",
         }
         overlap = sorted(reserved.intersection(options))
         if overlap:
@@ -378,10 +408,15 @@ class VLLMBackend(TokenizerMixin):
             try:
                 from vllm.lora.request import LoRARequest
                 self.lora_request = LoRARequest(
-                    "submission_v2_adapter", 1, str(Path(model_cfg["adapter"]).expanduser()),
+                    "adapter", 1, str(Path(model_cfg["adapter"]).expanduser()),
                 )
             except (ImportError, TypeError, ValueError) as exc:
                 raise BackendError("installed vllm does not support the requested LoRA adapter API") from exc
+        # Unset means vLLM selects the attention backend (auto). The supervisor sets
+        # JEV_ATTENTION_BACKEND=TRITON_ATTN only for its second startup attempt.
+        requested_attention = os.environ.get("JEV_ATTENTION_BACKEND")
+        if requested_attention:
+            options["attention_backend"] = requested_attention
         try:
             # These are correctness invariants, not configurable routing policy.
             self.engine = LLM(
@@ -401,11 +436,7 @@ class VLLMBackend(TokenizerMixin):
             self.quantization_kernel=active_model_cfg.quantization
             cache_cfg=getattr(getattr(self.engine.llm_engine,'vllm_config',None),'cache_config',None)
             self.prefix_caching=getattr(cache_cfg,'enable_prefix_caching',None)
-            try:
-                from .attention import observe_engine_attention
-            except ImportError:
-                from attention import observe_engine_attention
-            self.attention_backends=observe_engine_attention(self.engine)
+            self.runtime_info=runtime_info()
             self.tokenizer = self.engine.get_tokenizer()
             self.scan_digit_tokens()
             self.probe_params = SamplingParams(
@@ -442,7 +473,6 @@ class VLLMBackend(TokenizerMixin):
         try:
             if meter is not None: meter['engine_submitted']+=len(values)
             # TokensPrompt is a TypedDict; its runtime representation is this dict.
-            # TODO(vllm 0.31): installed-signature test is skipped without vllm.
             with self.lock:
                 check_deadline(meter)
                 result = self.engine.generate(
