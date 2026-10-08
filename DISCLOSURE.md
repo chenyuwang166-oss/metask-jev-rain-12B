@@ -215,8 +215,8 @@ answering with HTTP 200: each such decision has `route_reason` `memory_only` (or
 and the assumed prices. After 100 decisions, if the running average reaches 85% of 0.0646 USD per
 1,000 decisions, the fuse lowers the slow-path quota so that the expected average returns to 80% of
 the cap; it releases when the running average falls to 80%. The fast path is never changed. In the
-image run on the public items (section 7) the fuse made [[FACTS-PENDING: S6-FINAL cost-fuse transitions, usage.cost_fuse.transitions of the last line of results.jsonl]]
-transitions (running cost at the end USD [[FACTS-PENDING: S6-FINAL usage.cost_fuse.running_cost_per_1000 of the last line of results.jsonl]]
+image run on the public items (section 7) the fuse made 0
+transitions (running cost at the end USD 0.04751
 per 1,000 decisions). In an earlier official-harness run of this service at slow-path quota 0.20
 (2026-10-06) it made 0 transitions.
 
@@ -287,9 +287,9 @@ Each response also carries `usage.alternatives`: `submitted` (all submitted toke
 deduction) and `each_once` (each prompt counted once), plus `usage.input_tokens_details` with the
 cached and submitted token counts. A 422 or 503 response carries no usage. In the image run on the
 public items (section 7), USD per 1,000 decisions at the prices below: engine
-[[FACTS-PENDING: S6-FINAL engine basis, equal to the summarize price]], submitted
-[[FACTS-PENDING: S6-FINAL submitted basis]] and each_once [[FACTS-PENDING: S6-FINAL each_once basis]]
-(input and output token totals: [[FACTS-PENDING: S6-FINAL sums of usage.alternatives engine, submitted and each_once input_tokens and output_tokens over results.jsonl]]).
+0.04751, submitted
+0.08392 and each_once 0.05305
+(input and output token totals: engine 176,276 / 14,411; submitted 344,276 / 14,473; each_once 201,667 / 14,473).
 In an earlier official-harness run of this service at slow-path quota 0.20 (2026-10-06) the three
 values were 0.05144 (engine), 0.10010 (submitted) and 0.05954 (each_once).
 
@@ -346,18 +346,20 @@ adapter; accuracy is micro accuracy (correct/231) from `jevbench.cli summarize`.
 
 **Primary: this package in the runtime image.** README steps 1 to 4 on one RTX 4090 24 GB (compute
 capability 8.9): network disabled, read-only root filesystem, package and model mounted read-only,
-new `WORK`. Run [[FACTS-PENDING: S6-FINAL start and end UTC from run1/manifest.json]]; startup with
-empty caches [[FACTS-PENDING: S6-FINAL seconds from docker run to the health line]] s; `/health`
+new `WORK`. Run 2026-10-08T07:58:44Z to 08:01:57Z; startup with
+empty caches 206 s; `/health`
 status `ok`, no warnings, attention backend requested `auto`, observed
-[[FACTS-PENDING: S6-FINAL info.attention_backend and the Using ... backend line of attempt-1.log]].
-231/231 attempted, [[FACTS-PENDING: S6-FINAL failed count]] failed, schema validity
-[[FACTS-PENDING: S6-FINAL schema validity]]; accuracy [[FACTS-PENDING: S6-FINAL n_correct]]/231
-(macro [[FACTS-PENDING: S6-FINAL macro accuracy]]); ECE [[FACTS-PENDING: S6-FINAL ECE]], Brier
-[[FACTS-PENDING: S6-FINAL Brier]]; USD [[FACTS-PENDING: S6-FINAL summarize price]] per 1,000 decisions
-(engine basis, assumed prices); raw p50 [[FACTS-PENDING: S6-FINAL raw p50]] s, p95
-[[FACTS-PENDING: S6-FINAL raw p95]] s; peak GPU memory [[FACTS-PENDING: S6-FINAL peak GPU memory from the nvidia-smi samples]] MiB;
-slow path [[FACTS-PENDING: S6-FINAL slow-path count of 231, parsed and unparsed]]; cost-fuse
-transitions [[FACTS-PENDING: S6-FINAL transitions]].
+`TRITON_ATTN` (startup log: `Using AttentionBackendEnum.TRITON_ATTN backend.`).
+231/231 attempted, 0 failed, schema validity
+1.000; accuracy 203/231
+(macro 0.8800); ECE 0.045, Brier
+not reported by the harness summary; USD 0.04751 per 1,000 decisions
+(engine basis, assumed prices); raw p50 0.055 s, p95
+5.78 s; peak GPU memory 20,516 MiB;
+slow path 33 of 231 decisions (20 reached the answer marker; 13 kept the fast answer, `slow_unparsed_fast`); cost-fuse
+transitions 0.
+
+This run used code commit 27f5be88349e430706b809e4077f689517e9eb7a, identical to this commit except for DISCLOSURE.md, FREEZE.md and MANIFEST.sha256, and the pinned image's contents through a registry-mirror reference of the same index digest sha256:c1c9f6fd5c109ba7f0546a59f5b2f15fb87f64c77782e90a27b648b42a8e67c3; the README commands were otherwise used unchanged. Against the historical cold run of 2026-10-07 (below): 203 versus 202 correct; 33 and 33 slow-path decisions, with 6 items routed differently (near-threshold fast-path margins); 5 answers differ (3 now correct, 2 now wrong); USD 0.04751 versus 0.04736 per 1,000 decisions (+0.3%); raw p50 0.055 s versus 0.052 s, p95 5.78 s versus 5.71 s; peak GPU memory 20,516 MiB in both. The acceptance checks set before the image runs (accuracy within 2 items, at most 5 answer differences, slow count within 3, price within 3%, p50/p95 within 25%, peak memory at most 22,000 MiB) all pass. Further checks in the same image: a second container on the same WORK with run ID `run1` was refused at startup (`run_id already exists in --state-dir`); with run ID `run2` and the cache kept it started in 91 s; as user 1000:1000 on a fresh WORK it started in 186 s; each `docker stop -t 40` returned within 1 s and left no GPU process; after the scored run, malformed requests returned HTTP 400 (invalid JSON; missing questions) and 422 (unsupported question type) and health stayed `ok`; the 231 raw responses contain no warning, no partial error, no `fast_failed` and no `service_failed`. Long-input smoke in the same image: 3 public hard items each padded with about 288,000 unrelated characters returned HTTP 200 in 1.84, 1.68 and 1.66 s with 7,746, 7,880 and 7,752 input tokens on the fast path (1 output token each); 2 of 3 were correct.
 
 **Changes from commit 06428f09559a0a0536776c91cd544b12b68176f3 of this repository**
 (https://github.com/chenyuwang166-oss/metask-jev-rain-12B/tree/06428f09559a0a0536776c91cd544b12b68176f3).
