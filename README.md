@@ -6,9 +6,11 @@
 > |---|---|---|---|---|---|
 > | metask-jev-rain-12B-trained | yes | JevBench open-weight leaderboard v1.6.18 | Capability Score | 77.9 (highest among ranked entries labeled 12B) | 2026-10-14 |
 >
+> Measured by the leaderboard operator (Benchmark Heaven) on 1,500 decision items per system (1,200 sealed + 300 public).
+>
 > Leaderboard: https://benchmarkheaven.com/jev-models · Model: https://huggingface.co/MeTask-Rain/metask-jev-rain-12B-trained.
 >
-> 说明（2026-10-15）：本仓库是 2026-10-08 的冻结底座服务旧包（评测版本为标签 v1.1），留作记录。现行 12B 官方成绩来自训练版模型（见上表，榜方实测，非自测）。
+> 说明（2026-10-15）：本仓库是 2026-10-08 的冻结底座服务旧包（评测版本为标签 v1.1），留作记录。现行 12B 官方成绩来自训练版模型（见上表，榜方实测，非自测）。榜方 Benchmark Heaven 测量，每个系统 1,500 道决策题（1,200 封存 + 300 公开）。
 
 A self-hosted decision service for JevBench. It serves `POST /v1/systemone` for the unchanged
 `typesafe` adapter of the official harness, and `GET /health`. It loads a frozen community INT4
