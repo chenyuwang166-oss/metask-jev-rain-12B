@@ -1,5 +1,15 @@
 # metask-jev-rain-12B
 
+> **Status (2026-10-15):** This repository is our 2026-10-08 frozen-base service package (evaluated release: tag v1.1), kept for the record. Our current official JevBench result for 12B comes from the trained model, measured and ranked by the benchmark organizers (not self-reported):
+>
+> | Model | Trained | Leaderboard | Metric | Score | As of |
+> |---|---|---|---|---|---|
+> | metask-jev-rain-12B-trained | yes | JevBench open-weight leaderboard v1.6.18 | Capability Score | 77.9 (highest among ranked entries labeled 12B) | 2026-10-14 |
+>
+> Leaderboard: https://benchmarkheaven.com/jev-models · Model: https://huggingface.co/MeTask-Rain/metask-jev-rain-12B-trained.
+>
+> 说明（2026-10-15）：本仓库是 2026-10-08 的冻结底座服务旧包（评测版本为标签 v1.1），留作记录。现行 12B 官方成绩来自训练版模型（见上表，榜方实测，非自测）。
+
 A self-hosted decision service for JevBench. It serves `POST /v1/systemone` for the unchanged
 `typesafe` adapter of the official harness, and `GET /health`. It loads a frozen community INT4
 checkpoint of Gemma 4 12B with its weights unchanged. Facts, use of public items and measurements
