@@ -4,7 +4,7 @@
 >
 > | Model | Trained | Leaderboard | Metric | Score | As of |
 > |---|---|---|---|---|---|
-> | metask-jev-rain-12B-trained | yes | JevBench open-weight leaderboard v1.6.18 | Capability Score | 77.9 (highest among ranked entries labeled 12B) | 2026-10-14 |
+> | metask-jev-rain-12B-trained | yes | JevBench open-weight leaderboard v1.6.18 | Capability Score | 77.9 (highest among ranked entries labeled 12B in the system name) | 2026-10-14 |
 >
 > Measured by the leaderboard operator (Benchmark Heaven) on 1,500 decision items per system (1,200 sealed + 300 public).
 >
