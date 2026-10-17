@@ -1,21 +1,22 @@
 # metask-jev-rain-12B
 
-> **Status (2026-10-15):** This repository is our 2026-10-08 frozen-base service package (evaluated release: tag v1.1), kept for the record. Our current official JevBench result for 12B comes from the trained model, measured and ranked by the benchmark organizers (not self-reported):
->
-> | Model | Trained | Leaderboard | Metric | Score | As of |
-> |---|---|---|---|---|---|
-> | metask-jev-rain-12B-trained | yes | JevBench open-weight leaderboard v1.6.18 | Capability Score | 77.9 (highest among ranked entries labeled 12B in the system name) | 2026-10-14 |
->
-> Measured by the leaderboard operator (Benchmark Heaven) on 1,500 decision items per system (1,200 sealed + 300 public).
->
-> Leaderboard: https://benchmarkheaven.com/jev-models · Model: https://huggingface.co/MeTask-Rain/metask-jev-rain-12B-trained.
->
-> 说明（2026-10-15）：本仓库是 2026-10-08 的冻结底座服务旧包（评测版本为标签 v1.1），留作记录。现行 12B 官方成绩来自训练版模型（见上表，榜方实测，非自测）。榜方 Benchmark Heaven 测量，每个系统 1,500 道决策题（1,200 封存 + 300 公开）。
+This is MeTask's early JevBench service package, recorded on **2026-10-08** (evaluated release tag `v1.1`) and retained for reproducibility. The current trained 12B model is a separate release. Its official results and the current 31B model are linked below; these scores should not be attributed to this historical package.
 
-A self-hosted decision service for JevBench. It serves `POST /v1/systemone` for the unchanged
-`typesafe` adapter of the official harness, and `GET /health`. It loads a frozen community INT4
-checkpoint of Gemma 4 12B with its weights unchanged. Facts, use of public items and measurements
-are in [DISCLOSURE.md](DISCLOSURE.md).
+The historical model identity, training status, public-item use and measurement conditions remain in the [original disclosure](DISCLOSURE.md).
+
+## Current trained models
+
+Results checked on **2026-10-17** against [JevBench board v1.7.46](https://benchmarkheaven.com/jev-models) (page updated 2026-10-16). Scores are organizer-measured **Capability Scores**. Capability ranks are among **129 qualifying open-weight systems** under the official cost and latency limits; they are not composite-score ranks. The leaderboard's 'official #' label refers to its separate composite ranking.
+
+For these full-set results, the operator measures each system on 1,500 decisions: 1,200 sealed items that submitters cannot access and 300 public items.
+
+| Model | Capability Score | Capability rank | Weights | Service |
+|---|---:|---|---|---|
+| MeTask 31B (service v3) | 79.6 | 3 | [Model card](https://huggingface.co/MeTask-Rain/metask-jev-rain-31B-trained) | [31B service](https://github.com/chenyuwang166-oss/metask-jev-rain-31B-trained) |
+| MeTask 12B | 77.9 | 6; highest among entries labeled 12B in the system name | [Model card](https://huggingface.co/MeTask-Rain/metask-jev-rain-12B-trained) | [12B service](https://github.com/chenyuwang166-oss/metask-jev-rain-12B-trained) |
+
+
+Published by MeTask under the public GitHub account `chenyuwang166-oss`. Project and contact entry point: [MeTask-Rain](https://huggingface.co/MeTask-Rain).
 
 ## Requirements
 
