@@ -52,19 +52,6 @@ PYTHON=/abs/path/to/venv/bin/python bash serve.sh --model /abs/model --state-dir
 (`HF_HOME`, `XDG_*`, `TRITON_*`, `TORCH_HOME` and the others in `launch.PATH_VARIABLES`) that point
 outside `--state-dir`; unset them in the maintainer shell.
 
-## Public-data selftest
-
-```bash
-PYTHON=/abs/path/to/venv/bin/python bash selftest.sh --model /abs/model \
-  --public /abs/path/to/jevbench/datasets/public --output-dir /abs/path/to/new/output-dir
-```
-
-It starts the service three times (fast-only; routed; routed without prefix caching), runs
-`bench.py` against each, reconciles the reported usage with the engine counters
-(`reconcile_usage.py`), and writes a calibration candidate `calibration.candidate.json`. Everything
-is written below `--output-dir`; the package is never modified. The selftest uses the GPU
-exclusively; run nothing else on it at the same time.
-
 ## Freezing
 
 ```bash
@@ -112,41 +99,8 @@ are not part of the package. It flags:
   `127.0.0.1` and `0.0.0.0`) and remote-shell commands; bare `python` in shell scripts;
 - with `--release`: unresolved fact markers, process wording and links to Hugging Face or GitHub
   that are not pinned to a 40-character commit in the documents; any difference between the
-  documents and the fixed identifiers (model file table and `launch.py`, public data hashes,
-  runtime image digests, model and harness revisions, the model download command and the harness
-  price flags in README.md).
+  documents and the fixed identifiers (runtime image references, model and harness revisions,
+  the model download command and the harness price flags in README.md).
 
 The finalize rehearsal runs in a copy below a new `tempfile.mkdtemp` directory, which is kept. The
 offline tests also keep their directories below the system temporary directory.
-
-Numeric invariants checked by the offline tests (`regression_checks.py` unless noted):
-
-- `prompt_sha` `e18ed7a06eb52f1b351458f384710a2c240aaf2b4f64d916b776c6d18ca3f938`: it covers the
-  source of `core.render` and `core.choice_codes`, `prompt.system`, `prompt.enable_thinking` and
-  the generation settings other than `max_new_tokens`, `reasoning_words` and
-  `wall_timeout_seconds`; `validate_threshold(load_config()) == []`;
-- the source hashes of `render` and `choice_codes`, and of the functions and constants listed in
-  `REQUEST_PATH_SOURCE_SHA256`. Not listed: `Service` (routing predicate, calibration block choice,
-  usage bases), the fast and slow attempt wrappers, the backend and counter constructors and
-  `server.py`;
-- `PARAMETER_SHA256`: every value of `config.json`, `calibration.json` and `fitted.release.json`
-  except the descriptive `fitted_on`, `status` and `model_calibration_status` strings, which covers
-  `prompt.cot_instructions`, `prompt.answer_marker`, the limits, the routing, the cost fuse, the
-  prices and the engine options;
-- the vLLM engine arguments, including `attention_backend` only on the second startup attempt
-  (`test_attention.py`, with a stand-in `vllm` module).
-
-A change to any of them requires a new GPU measurement. Code outside these lists is checked only by
-the behavioural tests.
-
-## GPU comparison evidence
-
-Compare a new run with a reference run item by item: `fast_prompt_tokens`, `kept_prompt_tokens` and
-`original_prompt_tokens` in `usage.questions` must be equal, and so must the slow-path prompt tokens
-where both runs take the slow path; report the largest absolute difference of `fast_margin`, every
-change of route or argmax, all three usage totals and prices, failures, fuse transitions, latency
-and peak GPU memory. Probabilities computed from identical logits can differ at rounding level
-between Python 3.10 and 3.12; compare them with a tolerance such as 1e-12 and assess GPU run-to-run
-variation separately. Record the files created under the writable mount: `state/run1-startup/`
-(`attempts.jsonl`, `attempt-N.log`, `state-N/`, `tmp/`, `home/`), `state/cache/` and the harness
-output `run1/`.

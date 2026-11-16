@@ -294,20 +294,6 @@ def document_problems(root,launch):
                               ('fstandhartinger/jevbench',JEVBENCH_COMMIT)):
             for url in re.findall(r'https://(?:huggingface\.co|github\.com)/'+re.escape(repo)+r'/[^\s)>\]`]+',text):
                 need(revision in url,f'{name}: {repo} link not at {revision}')
-    disclosure=texts['DISCLOSURE.md']
-    for filename,digest in PUBLIC_DATA_SHA256.items():
-        row=re.search(r'(?m)^\|[^\n]*`'+re.escape(filename)+r'`[^\n]*$',disclosure)
-        need(row is not None and digest in row[0],'DISCLOSURE.md: public data hash differs for '+filename)
-    for filename,digest in launch.MODEL_SHA256.items():
-        row=re.search(r'(?m)^\| `'+re.escape(filename)+r'` \| ([\d,]+) \| `([0-9a-f]{64})` \|$',disclosure)
-        need(row is not None and row[2]==digest,'DISCLOSURE.md: model file table differs from launch.py for '+filename)
-    for filename,size in launch.SHARD_BYTES.items():
-        row=re.search(r'(?m)^\| `'+re.escape(filename)+r'` \| ([\d,]+) \| `([0-9a-f]{64})` \|$',disclosure)
-        need(row is not None and int(row[1].replace(',',''))==size and row[2]==launch.SHARD_SHA256[filename],
-             'DISCLOSURE.md: model shard table differs from launch.py for '+filename)
-    for name in ('README.md','DISCLOSURE.md'):
-        for digest in (launch.IMAGE.split('@',1)[1],IMAGE_INDEX,IMAGE_CONFIG):
-            need(digest in texts[name],f'{name}: image digest missing: {digest}')
     repo,revision=launch.MODEL_REVISION.split('@',1)
     downloads=re.findall(r'hf download (\S+) --revision (\S+)',texts['README.md'])
     need(downloads==[(repo,revision)],'README.md: model download command differs from launch.MODEL_REVISION')

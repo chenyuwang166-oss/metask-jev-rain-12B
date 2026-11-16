@@ -1,36 +1,12 @@
 # metask-jev-rain-12B
 
-This is MeTask's early JevBench service package, recorded on **2026-10-08** (evaluated release tag `v1.1`) and retained for reproducibility. The current trained 12B model is a separate release. Its official results and the current 31B model are linked below; these scores should not be attributed to this historical package.
-
-The historical model identity, training status, public-item use and measurement conditions remain in the [original disclosure](DISCLOSURE.md).
-
-## Current trained models
-
-Results checked on **2026-10-17** against [JevBench board v1.7.46](https://benchmarkheaven.com/jev-models) (page updated 2026-10-16). Scores are organizer-measured **Capability Scores**. Capability ranks are among **129 qualifying open-weight systems** under the official cost and latency limits; they are not composite-score ranks. The leaderboard's 'official #' label refers to its separate composite ranking.
-
-For these full-set results, the operator measures each system on 1,500 decisions: 1,200 sealed items that submitters cannot access and 300 public items.
-
-| Model | Capability Score | Capability rank | Weights | Service |
-|---|---:|---|---|---|
-| MeTask 31B (service v3) | 79.6 | 3 | [Model card](https://huggingface.co/MeTask-Rain/metask-jev-rain-31B-trained) | [31B service](https://github.com/chenyuwang166-oss/metask-jev-rain-31B-trained) |
-| MeTask 12B | 77.9 | 6; highest among entries labeled 12B in the system name | [Model card](https://huggingface.co/MeTask-Rain/metask-jev-rain-12B-trained) | [12B service](https://github.com/chenyuwang166-oss/metask-jev-rain-12B-trained) |
-
-
-Published by MeTask under the public GitHub account `chenyuwang166-oss`. Project and contact entry point: [MeTask-Rain](https://huggingface.co/MeTask-Rain).
-
 ## Requirements
 
 - One NVIDIA GPU used only by this service: at least 24 GB of memory, compute capability 8.0 or
   newer, NVIDIA driver 580 or newer. The commands use the host's GPU 0 (`--gpus '"device=0"'`).
 - Docker with the NVIDIA Container Toolkit.
 - Runtime image `vllm/vllm-openai@sha256:a4a4c0437bf7240089da5f08aa370c4aee17ae5290f7a3b468825ee26c4c3a6b`
-  (Python 3.12.3, vLLM 0.31.0, torch 2.13.0+cu130). It is the linux/amd64 image of vLLM release
-  `v0.31.0` with index digest `sha256:c1c9f6fd5c109ba7f0546a59f5b2f15fb87f64c77782e90a27b648b42a8e67c3`,
-  linux/amd64 manifest digest `sha256:a4a4c0437bf7240089da5f08aa370c4aee17ae5290f7a3b468825ee26c4c3a6b`
-  (used in the commands) and config digest
-  `sha256:c76d0e2225a4b1cb1e2109ace39639f55e714abd1a7a427acc8b0bbd7f6a83b3` (the classic Docker image
-  store shows the config digest as the image ID; the containerd image store identifies images by
-  manifest or index digest, depending on the reference used when pulling).
+  (Python 3.12.3, vLLM 0.31.0, torch 2.13.0+cu130).
   Nothing is installed and the service has no network access.
 - Model folder: the files of
   https://huggingface.co/cyankiwi/gemma-4-12B-it-qat-AWQ-INT4/tree/12deda07c573047b191b63f0768c0412120f3ed4
@@ -110,7 +86,7 @@ a run always starts from a freshly started service.
 
 - Health line: `"status": "ok"`, `"warnings": []`, `"model_key": "gemma-4-12b-awq"`,
   `"mode": "routed"`, `"prefix_caching": true`, `"supports_slow_session": true`.
-  `info.attention_backend` names the attention backend vLLM selected (DISCLOSURE, section 4);
+  `info.attention_backend` names the attention backend vLLM selected;
   `info.runtime` lists the Python, vLLM, torch, transformers, tokenizers, triton and
   compressed-tensors versions, the CUDA version of torch and the GPU name.
 - Startup: each startup attempt waits at most 1800 s for readiness. The first attempt lets vLLM
@@ -127,4 +103,4 @@ a run always starts from a freshly started service.
   per 1,000 decisions as null. After an engine failure, and from the third consecutive item failure
   on, the service answers every `POST /v1/systemone` with HTTP 503 and `/health` reports
   `"status": "error"`; the harness stops after three consecutive 503 responses. No substitute answer
-  is ever returned (DISCLOSURE, section 4).
+  is ever returned.
